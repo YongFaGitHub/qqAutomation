@@ -1,1 +1,2 @@
-"# Test" 
+# qqAutomation_py
+python+selenium+chrome自动化登录qq网页，以及模拟客户端发送ajax请求到tx服务器，解析返回数据
