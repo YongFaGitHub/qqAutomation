@@ -1,8 +1,8 @@
 # encoding=utf8
-# pip install demjson -i http://pypi.douban.com/simple --trusted-host pypi.douban.com 安装插件命令
+# pip install urllib2 -i http://pypi.douban.com/simple --trusted-host pypi.douban.com 安装插件命令
+import json
 import time
 from time import sleep
-
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
@@ -10,11 +10,15 @@ from selenium.webdriver.common.touch_actions import TouchActions
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-url = 'https://ui.ptlogin2.qq.com/cgi-bin/login?style=9&appid=549000929&pt_ttype=1&daid=5&pt_no_auth=1&pt_hide_ad=1&s_url=https%3A%2F%2Fact.qzone.qq.com%2Fvip%2F2019%2Fxcardv2%3F_wv%3D4%26zz%3D9%26from%3Darksend&pt_no_onekey=1'
-ua = 'Mozilla/5.0 (Linux; Android 6.0; PRO 6 Build/MRA58K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/53.0.2785.49 Mobile MQQBrowser/6.2 TBS/043221 Safari/537.36 V1_AND_SQ_7.0.0_676_YYB_D QQ/7.0.0.3135 NetType/WIFI WebP/0.3.0 Pixel/1080'
+import getConfig  # 引用获取配置文件模块
+import request  # 引入请求接口模块
+
+filename = 'user/账号.txt'
+confname = 'conf/通用配置.ini'
+
 options = webdriver.ChromeOptions()
 options.add_experimental_option('w3c', False)
-options.add_argument('user-agent=' + ua)
+options.add_argument('user-agent=' + getConfig.ReadConfig(confname,"用户代理",'ua'))
 driver = webdriver.Chrome(options=options)
 #滑块算法
 def get_track(distance):
@@ -35,17 +39,15 @@ def get_track(distance):
         track.append(round(move))
     return track
 
-#主线程
+#主线程，qqweb手机端登录代码
 def main(user,password,area):
+    driver.delete_all_cookies()
+    # print("路径！！！",str(getConfig.ReadConfig(confname,"链接路径",'url')))
     
-    driver.get(url)
-    # 检测id为"switcher_plogin"的元素是否加在DOM树中，如果出现了才能正常向下执行
-    # element = WebDriverWait(driver, 5, 0.5).until(
-    # 	EC.presence_of_element_located((By.ID, "go"))
-    # )
-    # element.click()
-    print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
+    driver.get('https://ui.ptlogin2.qq.com/cgi-bin/login?style=9&appid=549000929&pt_ttype=1&daid=5&pt_no_auth=1&pt_hide_ad=1&s_url=https%3A%2F%2Fact.qzone.qq.com%2Fvip%2F2019%2Fxcardv2%3F_wv%3D4%26zz%3D9%26from%3Darksend&pt_no_onekey=1')
 
+    print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
+   
     sleep(1)
     # 输入用户名和密码
     driver.find_element_by_id('u').clear()
@@ -53,24 +55,21 @@ def main(user,password,area):
     driver.find_element_by_id('p').clear()
     driver.find_element_by_id('p').send_keys(password)
     sleep(1)
-    # 点击登录
+    # 触摸touch事件，登录
     go = driver.find_element_by_id('go')
     Action = TouchActions(driver)
     Action.tap(go).perform()
-    # driver.find_element_by_id('go').click()
-
-    sleep(4)
+   
+    sleep(5)
 
     # 切换iframe
     try:
         iframe = driver.find_element_by_xpath('//*[@id="tcaptcha_iframe"]')
-        # iframe = driver.find_element_by_xpath('//iframe')
+       
     except Exception as e:
         print('get iframe failed: ', e)
     sleep(2)  # 等待资源加载
     driver.switch_to.frame(iframe)
-
-    # button = driver.find_element_by_id('tcaptcha_drag_button')
     button = driver.find_element_by_id('tcaptcha_drag_button')  # 寻找滑块
     sleep(1)
     # 开始拖动 perform()用来执行ActionChains中存储的行为
@@ -102,37 +101,49 @@ def main(user,password,area):
             distance -= offset
             times += 1
             sleep(5)
+            if times > 9:
+                flag = 1
         else:
             print('滑块验证通过')
             flag = 1
             driver.switch_to.parent_frame()  # 验证成功后跳回最外层页面
             break
-
     sleep(2)
-    # driver.quit()
-    print("finish~~")
-    print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
-    return flag
+    # 判断成功登录到活动页还是失败并且把失败原因打印出来
+    success = 0
+    try:
+        error_message = driver.find_element_by_id('error_message').text
+    except Exception as e:
+        print('get error_message error: %s' % e)
+        error_message = ''
+    if error_message:
+        print('登陆失败原因: %s' % error_message)
+        sleep(1)
+        success = 1
+    else:
+        print('成功登陆到活动页')
+        success = 0
+        
+    if success == 1:
+        return 
+    else:
+        pass    
+        print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
+        skey = driver.get_cookies("skey")
+        uin = driver.get_cookies("uin")
+        cookiestr="uin="+uin+"; "+"skey="+skey+";"
+        print("cookiestr","uin="+uin+"; "+"skey="+skey+";")
+        with open('cookie.text','w',encoding='utf-8') as f:
+            f.write(user+'----'+cookiestr+'\r\n')
+        request.getUserInfo(cookiestr)
 def user():
-    data=[]
-    filename = 'user/账号.txt' # txt文件和当前脚本在同一目录下，所以不用写具体路径
-    pos = []
-    Efield = []
-    with open(filename,encoding='UTF-8') as file_to_read:
-        while True:
-            lines = file_to_read.readline() # 整行读取数据
-            if not lines:
-                break
-            pass
-            listData = []
-            for i in lines.split():
-                listData.append(i)
-            pass
-            print("账号信息~~user",listData)
-            main(listData[0],listData[1],listData[2])
-    pass
-    return data
+    user=getConfig.getText(filename)
+    print("user~~",user)
+    for i in user:
+        print("i~~",i)
+        main(i[0],i[1],i[2])
+   # print("user~~",user)
+    
 if __name__ == '__main__':
    # main()
-
    user()
