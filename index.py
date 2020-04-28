@@ -131,7 +131,7 @@ def main(user,password,area):
         print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
         skey = driver.get_cookie("skey")
         uin = driver.get_cookie("uin")
-        print("cookiestr","uin="+uin+"; "+"skey="+skey+";")
+        print("cookiestr","uin="+str(uin)+"; "+"skey="+str(uin)+";")
         cookiestr="uin="+str(uin)+"; "+"skey="+str(skey)+";"
         
         with open('cookie.text','w',encoding='utf-8') as f:
@@ -139,7 +139,7 @@ def main(user,password,area):
         request.getUserInfo(cookiestr)
 def user():
     user=getConfig.getText(filename)
-    print("user~~",user)
+    # print("user~~",user)
     for i in user:
         print("i~~",i)
         main(i[0],i[1],i[2])
