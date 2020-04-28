@@ -129,10 +129,11 @@ def main(user,password,area):
     else:
         pass    
         print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
-        skey = driver.get_cookies("skey")
-        uin = driver.get_cookies("uin")
-        cookiestr="uin="+uin+"; "+"skey="+skey+";"
+        skey = driver.get_cookie("skey")
+        uin = driver.get_cookie("uin")
         print("cookiestr","uin="+uin+"; "+"skey="+skey+";")
+        cookiestr="uin="+str(uin)+"; "+"skey="+str(skey)+";"
+        
         with open('cookie.text','w',encoding='utf-8') as f:
             f.write(user+'----'+cookiestr+'\r\n')
         request.getUserInfo(cookiestr)
