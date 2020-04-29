@@ -1,33 +1,42 @@
 import json
 import math
+import os
 import random
 import re
 import sys
 import time
+from http import cookiejar
+from urllib import request
+
 import demjson
 import requests
-from urllib import request
-from http import cookiejar
-# #跳过SSL验证证书
-# import ssl
-# #设置忽略SSL验证
-# ssl._create_default_https_context = ssl._create_unverified_context
-def getUserInfo(cookiestr):
-    print("cookiestr",cookiestr)
-    # 'uin=o1071343549; skey=@Gry3JTMTU;' skey=@Gry3JTMTU;
+
+import getConfig  # 引用获取配置文件模块
+
+confname = os.getcwd()+"\\conf\\通用配置.ini"
+#跳过SSL验证证书
+import ssl
+#设置忽略SSL验证
+ssl._create_default_https_context = ssl._create_unverified_context
+def getTokenByKey(skey):
+    #qq空间 g_tk 算法 r算法 = Math.random()
+    hash = 5381;
+    s = skey
+    for i in s:
+            hash += (hash << 5) + ord(i)
+    return hash & 2147483647
+#获取用户信息    
+def getUserInfo(cookiestr,areas):
+    
     #qq模拟登陆后，可以获取到cookie，cookie带到请求头里
     headers={
-        'authority': 'comm.aci.game.qq.com',
-        'method': 'GET',
-        'scheme': 'https',
         'cookie': cookiestr,
         'referer': 'https://act.qzone.qq.com/vip/roleSelector',
-        'user-agent': 'Mozilla/5.0 (Linux; Android 6.0; PRO 6 Build/MRA58K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/53.0.2785.49 Mobile MQQBrowser/6.2 TBS/043221 Safari/537.36 V1_AND_SQ_7.0.0_676_YYB_D QQ/7.0.0.3135 NetType/WIFI WebP/0.3.0 Pixel/1080'
         }
     t = time.time()    
     rand = + t + math.floor(random.random() * 20000);    
-    res=requests.get("https://comm.aci.game.qq.com/main?game=dnf&area=65&callback="+str(rand)+"&sCloudApiName=ams.gameattr.role&iAmsActivityId=https%3A%2F%2Fact.qzone.qq.com%2Fvip%2FroleSelector",headers=headers)
-    print(res.text)
+    res=requests.get("https://comm.aci.game.qq.com/main?game=dnf&area="+areas+"&callback="+str(rand)+"&sCloudApiName=ams.gameattr.role",headers=headers)
+    #print("getUserInfo",res.text)
     #cont=res.text.decode('utf-8')
     rex=re.compile(r'\{[^\}]+\}')
     # print("cont",cont)
@@ -36,16 +45,44 @@ def getUserInfo(cookiestr):
     # con=json.loads(content)
     con = demjson.decode(content) #json 解析成字典
     # print("con",content)
-    print ('data    ',con['data'],'checkparam    ',con['checkparam'],'md5str    ',con['md5str'])
-    #qq空间 g_tk 算法 r算法 = Math.random()
-
-    # str = cookie.get("p_skey") || cookie.get("skey")        
-    # getTokenByKey: function(str) {
-    #             var t = 5381
-    #               , i = e;
-    #             for (var n = 0, r = i.length; n < r; ++n) {
-    #                 t += (t << 5) + i.charAt(n).charCodeAt()
-    #             }
-    #             return t & 2147483647
+    print ('角色列表 ',con['data'],'checkparam    ',con['checkparam'],'md5str    ',con['md5str'])
+    listData = []
+    for i in con['data'].split():
+        listData.append(i)
+    print("listData",listData[0].split("|")[1])
+    return listData[0].split("|")[1]
+def getLookVideo(cookiestr,skey,user):
+    print("getLookVideo",cookiestr,skey,user)
+    headers={
+        'cookie': cookiestr,
+        }
+    data = "actid=3316&ruleid=19874&format=json&uin="+user+""
+    res=requests.post("https://activity.qzone.qq.com/fcg-bin/fcg_qzact_present?g_tk=%d"%getTokenByKey(skey)+"&r=0.14693180627876368",headers=headers,data=data)
+    print("看视频获取资格",res.text)
+    con = demjson.decode(res.text) #json 解析成字典
+    print("con",str(con))
+    #print ('data    ',con['data'],'checkparam    ',con['checkparam'],'md5str    ',con['md5str'])
     #         },
-#getUserInfo("cookiestr")
+def getLotteryDraw(cookiestr,skey,user):
+    print("getLookVideo",cookiestr,skey,user)
+    headers={
+        'cookie': cookiestr,
+        }
+    data = "actid=3316&ruleid=19874&format=json&uin="+user+""
+    res=requests.post("https://activity.qzone.qq.com/fcg-bin/fcg_qzact_lottery?g_tk=%d"%getTokenByKey(skey)+"&r=0.14693180627876368",headers=headers,data=data)
+    print("抽奖资格",res.text)
+    con = demjson.decode(res.text) #json 解析成字典
+    print("con",str(con))
+def getEveryDayLogin(cookiestr,skey,user,area,roleid):
+    print("getLookVideo",cookiestr,skey,user,area)
+    headers={
+        'cookie': cookiestr,
+        }
+    data = "area="+area+"&partition="+area+"&roleid="+roleid+"&platform=pc&query=0&act_name=act_dnf_ark6&format=json&uin="+user+""
+    res=requests.post("https://activity.qzone.qq.com/fcg-bin/v2/fcg_yvip_game_pull_flow?g_tk=%d"%getTokenByKey(skey)+"&r=0.14693180627876368",headers=headers,data=data)
+    print("登录dnf获取资格",res.text)
+    con = demjson.decode(res.text) #json 解析成字典
+    print("con",str(con))
+getUserInfo("uin=o1071343549; skey=@a3vvob2kl; p_skey=WXUz262MY3roIvqWzP*LfPm3NYqXpu1g-O6gPCpMMqw_;","40")
+#getLookVideo('uin=o1071343549; skey=@a3vvob2kl; p_skey=WXUz262MY3roIvqWzP*LfPm3NYqXpu1g-O6gPCpMMqw_;','WXUz262MY3roIvqWzP*LfPm3NYqXpu1g-O6gPCpMMqw_','1071343549')
+#getEveryDayLogin('uin=o1027187669; skey=@fq8xNvT4y; p_skey=FyHZIDkukDxjkYUBCH35LgYzETsZqKGJJ5Z-O3PZZik_;','FyHZIDkukDxjkYUBCH35LgYzETsZqKGJJ5Z-O3PZZik_','1027187669','40')

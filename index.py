@@ -9,12 +9,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.touch_actions import TouchActions
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-
+import os
+import demjson
 import getConfig  # 引用获取配置文件模块
 import request  # 引入请求接口模块
 
-filename = 'user/账号.txt'
-confname = 'conf/通用配置.ini'
+filename = os.getcwd()+"\\user\\账号.txt"
+confname = os.getcwd()+"\\conf\\通用配置.ini"
+district = os.getcwd()+"\\conf\\大区配置.ini"
 
 options = webdriver.ChromeOptions()
 options.add_experimental_option('w3c', False)
@@ -38,10 +40,21 @@ def get_track(distance):
         current += move
         track.append(round(move))
     return track
-
+#给json内的键加上双引号
+def jsonPropt(astr):
+    return astr.replace(' ','').replace('\n','').replace('\r','')\
+               .replace("'",'"').replace('{','{"').replace(':','":')\
+               .replace('],','],"').replace('",','","')
 #主线程，qqweb手机端登录代码
 def main(user,password,area):
     driver.delete_all_cookies()
+    areas=getConfig.ReadConfig(district,"大区配置",area)
+    if areas:
+        print("获取大区成功:",areas)
+    else:
+        pass
+        print("获取大区失败:",areas)
+        return
     # print("路径！！！",str(getConfig.ReadConfig(confname,"链接路径",'url')))
     
     driver.get('https://ui.ptlogin2.qq.com/cgi-bin/login?style=9&appid=549000929&pt_ttype=1&daid=5&pt_no_auth=1&pt_hide_ad=1&s_url=https%3A%2F%2Fact.qzone.qq.com%2Fvip%2F2019%2Fxcardv2%3F_wv%3D4%26zz%3D9%26from%3Darksend&pt_no_onekey=1')
@@ -74,9 +87,9 @@ def main(user,password,area):
     sleep(1)
     # 开始拖动 perform()用来执行ActionChains中存储的行为
     flag = 0
-    distance = 195
+    distance = 196
     offset = 5
-    times = 0
+    times = 1
     while 1:
         action = ActionChains(driver)
         action.click_and_hold(button).perform()
@@ -93,14 +106,17 @@ def main(user,password,area):
         # 判断某元素是否被加载到DOM树里，并不代表该元素一定可见
         try:
             alert = driver.find_element_by_id('tcaptcha_note').text
+            message = driver.find_element_by_id('guideText').text
         except Exception as e:
             print('get alert error: %s' % e)
             alert = ''
-        if alert:
+        if alert and message:
             print('滑块位移需要调整: %s' % alert)
             distance -= offset
             times += 1
             sleep(5)
+            if times == 4:
+                distance =195
             if times > 9:
                 flag = 1
         else:
@@ -108,7 +124,7 @@ def main(user,password,area):
             flag = 1
             driver.switch_to.parent_frame()  # 验证成功后跳回最外层页面
             break
-    sleep(2)
+    sleep(4)
     # 判断成功登录到活动页还是失败并且把失败原因打印出来
     success = 0
     try:
@@ -122,21 +138,47 @@ def main(user,password,area):
         success = 1
     else:
         print('成功登陆到活动页')
+        sleep(2)
         success = 0
+        js = """
+        var hello = window.syncData;
+        return hello;
+        """
+        con = driver.execute_script(js)
         
+        if con:
+            for key, value in con["actCount"].items():
+                for key, value in value.items():
+                    for key, value in value.items():
+                        print("名称：",value[0]['name'],"剩余：",value[0]['add'])
+        else:
+            print("活动页不存在",con)
+            return
     if success == 1:
         return 
     else:
-        pass    
+        pass
+        #获取cookie参数，拼装参数写入文件并且带入到接口中请求    
         print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
         skey = driver.get_cookie("skey")
         uin = driver.get_cookie("uin")
-        print("cookiestr","uin="+str(uin)+"; "+"skey="+str(uin)+";")
-        cookiestr="uin="+str(uin)+"; "+"skey="+str(skey)+";"
-        
-        with open('cookie.text','w',encoding='utf-8') as f:
+        p_skey = driver.get_cookie("p_skey")
+        # print("cookiestr","uin="+str(uin)+"; "+"skey="+str(skey)+";")
+        cookiestr="uin="+str(uin['value'])+"; "+"skey="+str(skey['value'])+"; "+"p_skey="+str(p_skey['value'])+";"
+        print("cookiestr",cookiestr)
+        with open('cookie.text','a+',encoding='utf-8') as f:
             f.write(user+'----'+cookiestr+'\r\n')
-        request.getUserInfo(cookiestr)
+        #获取用户角当前大区角色信息    
+        roleid=request.getUserInfo(cookiestr,areas)
+        print("roleid",roleid)
+        key=str(skey['value'])
+        if p_skey:
+            print("key==p_skey")
+            key=str(p_skey['value'])
+        request.getLotteryDraw(cookiestr,str(key),user)
+        request.getLookVideo(cookiestr,str(key),user)
+        request.getEveryDayLogin(cookiestr,str(key),user,areas,roleid)
+          
 def user():
     user=getConfig.getText(filename)
     # print("user~~",user)
