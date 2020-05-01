@@ -20,6 +20,7 @@ def ReadConfig(confname,key,code):
 		 
 	SrcRoot = cfg.get(key, code).strip()
 	return SrcRoot
+
 #读取文本文件
 def getText(filename):
     data=[]
@@ -34,4 +35,17 @@ def getText(filename):
                 listData.append(i)
             pass
             data.append(listData)
+			
     return data
+def setText(filename,user,area,status):
+	#将文件读取到内存中
+	with open(filename,"r",encoding="utf-8") as f:
+		lines = f.readlines() 
+	#写的方式打开文件
+	with open(filename,"w",encoding="utf-8") as f_w:
+		for line in lines:
+			if user in line:
+			#替换
+				line = line.replace(area,area+" ----"+status)
+				print(line)
+			f_w.write(line)
