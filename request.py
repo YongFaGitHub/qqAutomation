@@ -58,6 +58,7 @@ def getTokenByKey(skey):
     return hash & 2147483647
 #获取用户信息    
 def getUserInfo(cookiestr,areas):
+   
     headers={
         'cookie': cookiestr,
         'referer': 'https://act.qzone.qq.com/vip/roleSelector',
@@ -116,3 +117,39 @@ def getEveryDayLogin(cookiestr,skey,user,area,roleid):
     print("登录dnf获取资格",res.text)
     con = demjson.decode(res.text) #json 解析成字典
     #print("con",str(con))
+def getIP(url):
+    res = requests.get(url)
+    con=''
+    if res.status_code == 200:
+        con = demjson.decode(res.text) #json 解析成字典
+        print(con)
+    else:
+        print("获取数据失败")
+    return con
+    #print(con['data'][num]['IP'].split(":")[1])
+def checkIP():
+    res = requests.get('http://httpbin.org/ip')
+    #con = demjson.decode(res.text) #json 解析成字典
+    print(res.text)
+
+# def getProxy(data):
+
+    # #代理服务器
+    # proxyHost = data.split(":")[[0]
+    # proxyPort = data.split(":")[1]
+
+    # proxyMeta = "https://%(host)s:%(port)s" % {
+    #     "host" : proxyHost,
+    #     "port" : proxyPort,
+    # }
+
+    # #pip install -U requests[socks]  socks5代理
+    # # proxyMeta = "socks5://%(host)s:%(port)s" % {
+    # #     "host" : proxyHost,
+    # #     "port" : proxyPort,
+    # # }
+
+    # proxies = {
+    #     "https"  : proxyMeta,
+    # }
+    # return proxies

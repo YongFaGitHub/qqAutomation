@@ -20,15 +20,51 @@ import request  # 引入请求接口模块
 filename = os.getcwd()+"\\user\\账号.txt"
 confname = os.getcwd()+"\\conf\\通用配置.ini"
 district = os.getcwd()+"\\conf\\大区配置.ini"
-
+statusSuccess = os.getcwd()+"\\status\\成功.txt"
+statusFail = os.getcwd()+"\\status\\成功.txt"
+statusFail = os.getcwd()+"\\status\\成功.txt"
+PROXY=''
 options = webdriver.ChromeOptions()
 options.add_experimental_option('w3c', False)
 options.add_argument(
     'user-agent=' + getConfig.ReadConfig(confname, "用户代理", 'ua'))
 driver = webdriver.Chrome(options=options)
+
+def proxy(targetUrl,num):
+    url = getConfig.ReadConfig(confname, "换ip地址", 'ipUrl')
+    data=request.getIP(url)
+    print(data)
+    PROXY=data['data'][num]['IP']
+    # 设置有账号密码的代理
+    # proxyauth_plugin_path = create_proxyauth_extension(
+    #             proxy_host='host',
+    #             proxy_port='port',
+    #             proxy_username="username",
+    #             proxy_password="password"
+    #         )
+    # options.add_extension(proxyauth_plugin_path)
+    # 设置无账号密码的代理
+    # chromeOptions = webdriver.ChromeOptions()
+    # chromeOptions.add_argument('--proxy-server=http://'+PROXY)  
+    # driver = webdriver.Chrome(chrome_options=chromeOptions)
+    desired_capabilities = options.to_capabilities()
+    desired_capabilities['proxy'] = {
+    "httpProxy": PROXY,
+    "ftpProxy": PROXY,
+    "sslProxy": PROXY,
+    "noProxy": None,
+    "proxyType": "MANUAL",
+    "class": "org.openqa.selenium.Proxy",
+    "autodetect": False
+    }
+    webdriver.Chrome(desired_capabilities = desired_capabilities)
+    request.checkIP()
+    driver.get(targetUrl)
+
+    print (driver.title)
+    # print (driver.page_source.encode("utf-8"))
+    
 # 滑块算法
-
-
 def get_track(distance):
     track = []
     current = 0
@@ -56,9 +92,10 @@ def jsonPropt(astr):
 # 主线程，qqweb手机端登录代码
 
 
-def main(user, password, area):
+def main(user, password, area,number):
     driver.delete_all_cookies()
     areas = getConfig.ReadConfig(district, "大区配置", area)
+    
     if areas:
         print("获取大区成功:", areas)
     else:
@@ -66,8 +103,10 @@ def main(user, password, area):
         print("获取大区失败:", areas)
         return
     # print("路径！！！",str(getConfig.ReadConfig(confname,"链接路径",'url')))
-
-    driver.get('https://ui.ptlogin2.qq.com/cgi-bin/login?style=9&appid=549000929&pt_ttype=1&daid=5&pt_no_auth=1&pt_hide_ad=1&s_url=https%3A%2F%2Fact.qzone.qq.com%2Fvip%2F2019%2Fxcardv2%3F_wv%3D4%26zz%3D9%26from%3Darksend&pt_no_onekey=1')
+    if number==0:
+        proxy('https://ui.ptlogin2.qq.com/cgi-bin/login?style=9&appid=549000929&pt_ttype=1&daid=5&pt_no_auth=1&pt_hide_ad=1&s_url=https%3A%2F%2Fact.qzone.qq.com%2Fvip%2F2019%2Fxcardv2%3F_wv%3D4%26zz%3D9%26from%3Darksend&pt_no_onekey=1',number)
+    else:
+        driver.get('https://ui.ptlogin2.qq.com/cgi-bin/login?style=9&appid=549000929&pt_ttype=1&daid=5&pt_no_auth=1&pt_hide_ad=1&s_url=https%3A%2F%2Fact.qzone.qq.com%2Fvip%2F2019%2Fxcardv2%3F_wv%3D4%26zz%3D9%26from%3Darksend&pt_no_onekey=1')
 
     print(time.strftime('%Y-%m-%d-%H:%M:%S', time.localtime(time.time())))
 
@@ -109,7 +148,7 @@ def main(user, password, area):
     sleep(1)
     # 开始拖动 perform()用来执行ActionChains中存储的行为
     flag = 0
-    distance = 197
+    distance = 200
     offset = 5
     times = 1
     while 1:
@@ -179,6 +218,7 @@ def main(user, password, area):
         print('登陆失败原因: %s' % error_message, error_message_open)
         sleep(1)
         getConfig.setText(filename, user, area,'登陆失败原因:'+error_message+error_message_open)
+        getConfig.setText2(statusFail, user, password,area,'登陆失败原因:'+error_message+error_message_open)
         success = 1
     else:
         print('成功登陆到活动页')
@@ -191,10 +231,15 @@ def main(user, password, area):
         con = driver.execute_script(js)
 
         if con:
+            card=0
+            html=''
             for key, value in con["actCount"].items():
                 for key, value in value.items():
                     for key, value in value.items():
-                        print(" 名称：", value[0]['name'], "剩余：", value[0]['add'])
+                        card+=1
+                        if card >= 11:
+                            html+=" 名称：", value[0]['name'], "剩余：", value[0]['add']+'\r\n'
+            getConfig.setText2(statusFail, user, password,area, '未到达活动页，失败原因未知')                
         else:
             print("活动页不存在", con)
             try:
@@ -207,6 +252,8 @@ def main(user, password, area):
             except NameError as na:
                 logger.info("截图失败:%s" % na)
                 getConfig.setText(filename, user, area, '未到达活动页，失败原因未知')
+                getConfig.setText2(statusFail, user, password,area, '未到达活动页，失败原因未知')
+        
             return
     if success == 1:
         return
@@ -246,20 +293,32 @@ def main(user, password, area):
 
         print("完成抽奖")
         getConfig.setText(filename, user, area, '完成抽奖')
-
+        getConfig.setText2(statusSuccess, user, password,area, '完成抽奖')
+        
 
 def user():
+    numbers = getConfig.ReadConfig(confname, "IP次数", 'number')
+    num=1
     user = getConfig.getText(filename)
     # print("user~~",user)
     for i in user:
-        if len(i) == 4:
+        if len(i) >= 4:
             print("跳过当前账号，原因:", i[3])
         else:
             print("账号", str(i[0]), "大区", str(i[2]))
-            main(i[0], i[1], i[2])
+            if int(numbers)!=0:
+                if num<int(numbers):
+                    main(i[0], i[1], i[2],1)
+                else:
+                    main(i[0], i[1], i[2],num%int(numbers))
+            else:
+                main(i[0], i[1], i[2],1)
+           
+        num+=1
    # print("user~~",user)
 
 
 if __name__ == '__main__':
 
     user()
+    

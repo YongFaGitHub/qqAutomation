@@ -49,3 +49,12 @@ def setText(filename,user,area,status):
 				line = line.replace(area,area+" ----"+status)
 				print(line)
 			f_w.write(line)
+def setText2(filename,user,password,area,status):
+	#将文件读取到内存中
+	with open(filename,"r",encoding="utf-8") as f:
+		lines = f.readlines() 
+	#写的方式打开文件
+	with open(filename,"w",encoding="utf-8") as f_w:
+		line = (user," ",password," ",area+" ----"+status)
+		print(line)
+		f_w.write(str(line))
